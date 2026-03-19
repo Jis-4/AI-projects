@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 .venv/
+generative_ai_image_creator/data/creative_studio.db
+generative_ai_image_creator/data/generated/*.svg

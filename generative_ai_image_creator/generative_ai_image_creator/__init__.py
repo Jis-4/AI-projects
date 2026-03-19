@@ -1,7 +1,6 @@
-"""Generative AI Image Creator package."""
+"""Marketing Creative Studio package."""
 
-from .dataset import SyntheticShapesDataset
-from .gan import GANTrainer
-from .vae import VAETrainer
+from .config import AppConfig
+from .service import CreativeStudioService
 
-__all__ = ["SyntheticShapesDataset", "GANTrainer", "VAETrainer"]
+__all__ = ["AppConfig", "CreativeStudioService"]

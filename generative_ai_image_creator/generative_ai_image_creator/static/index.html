@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketing Creative Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">Generative AI Image Creator</p>
+          <h1>Marketing Creative Studio</h1>
+          <p>
+            Generate campaign-ready visual concepts with prompt optimization, ranked outputs, editing controls, and a real gallery workflow.
+          </p>
+        </div>
+        <div class="use-cases">
+          <button class="use-case active" data-use-case="marketing">Marketing Tool</button>
+          <button class="use-case" data-use-case="avatar">Avatar Generator</button>
+          <button class="use-case" data-use-case="ui_mockup">UI Mockup Generator</button>
+        </div>
+        <form id="generate-form" class="panel">
+          <input type="hidden" id="use_case" name="use_case" value="marketing" />
+          <label>Project name<input id="project_name" name="project_name" value="Summer Launch Sprint" required /></label>
+          <label>Brand<input id="brand" name="brand" value="Nova Labs" required /></label>
+          <label>Product<input id="product" name="product" value="Glow Serum" required /></label>
+          <label>Audience<input id="audience" name="audience" value="skincare shoppers aged 22-34" required /></label>
+          <label>Campaign goal<input id="campaign_goal" name="campaign_goal" value="Boost paid social conversions" required /></label>
+          <label>Original prompt<textarea id="prompt" name="prompt" rows="4">Create a premium, high-converting social ad that highlights the serum's glow effect.</textarea></label>
+          <label>Style cues<input id="style" name="style" value="cinematic, premium, glossy, editorial" required /></label>
+          <label>Call to action<input id="call_to_action" name="call_to_action" value="Shop Now" required /></label>
+          <label>Negative prompt<input id="negative_prompt" name="negative_prompt" value="avoid clutter, tiny unreadable text, cheap-looking colors" /></label>
+          <label>Variants<input id="variants" name="variants" type="number" value="4" min="1" max="8" /></label>
+          <button type="submit" class="primary">Generate concepts</button>
+        </form>
+      </aside>
+
+      <main class="content">
+        <section class="hero panel">
+          <div>
+            <p class="eyebrow">Workflow</p>
+            <h2>From messy idea to ranked creative directions</h2>
+            <p id="status-text">Optimize the prompt, generate several branded concepts, favorite the best one, then edit specific regions with style controls.</p>
+          </div>
+          <div class="stats-grid">
+            <div><span id="stat-images">0</span><small>stored creatives</small></div>
+            <div><span id="stat-top">0</span><small>top score</small></div>
+            <div><span id="stat-usecase">marketing</span><small>focus area</small></div>
+          </div>
+        </section>
+
+        <section class="panel prompt-panel">
+          <div class="section-header">
+            <h3>Prompt optimization</h3>
+          </div>
+          <div id="prompt-output" class="prompt-output empty">No optimized prompt yet. Generate a batch to see recommendations.</div>
+        </section>
+
+        <section class="panel rankings-panel">
+          <div class="section-header">
+            <h3>Top ranked outputs</h3>
+          </div>
+          <div id="top-ranked" class="top-ranked empty">No ranked creatives yet.</div>
+        </section>
+
+        <section class="panel gallery-panel">
+          <div class="section-header">
+            <h3>Creative gallery</h3>
+            <button id="refresh-gallery" class="secondary">Refresh</button>
+          </div>
+          <div id="gallery" class="gallery empty">No images stored yet.</div>
+        </section>
+      </main>
+    </div>
+
+    <template id="creative-card-template">
+      <article class="creative-card">
+        <img class="creative-preview" alt="Generated creative preview" />
+        <div class="card-body">
+          <div class="card-headline-row">
+            <h4 class="creative-headline"></h4>
+            <button class="favorite-toggle" title="Favorite">☆</button>
+          </div>
+          <p class="creative-meta"></p>
+          <p class="creative-score"></p>
+          <div class="rating-group"></div>
+          <details class="edit-panel">
+            <summary>Edit output</summary>
+            <label>Mask region
+              <select class="edit-mask-region">
+                <option value="hero">Hero visual</option>
+                <option value="headline">Headline</option>
+                <option value="cta">CTA</option>
+                <option value="background">Background</option>
+              </select>
+            </label>
+            <label>Replacement text<input class="edit-replacement" placeholder="Optional new headline" /></label>
+            <label>Edit instruction<textarea class="edit-instruction" rows="3" placeholder="Describe the change, e.g. make the hero softer and more luxurious"></textarea></label>
+            <label>Palette
+              <select class="edit-palette">
+                <option value="">Keep current</option>
+                <option value="electric">Electric</option>
+                <option value="luxury">Luxury</option>
+                <option value="playful">Playful</option>
+                <option value="minimal">Minimal</option>
+              </select>
+            </label>
+            <label>Layout
+              <select class="edit-layout">
+                <option value="">Keep current</option>
+                <option value="hero-left">Hero left</option>
+                <option value="hero-right">Hero right</option>
+                <option value="stacked">Stacked</option>
+                <option value="spotlight">Spotlight</option>
+              </select>
+            </label>
+            <label>Style strength<input class="edit-strength" type="range" min="0" max="100" value="70" /></label>
+            <button class="secondary edit-submit">Apply edit</button>
+          </details>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

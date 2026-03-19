@@ -16,8 +16,8 @@ Run:
 python textparaphraser.py "This is the sentence I want to paraphrase."
 ```
 
-### Generative AI Image Creator
-A dependency-light image generation project that implements both a **VAE** and a **GAN** in pure Python, trains on synthetic geometric images, saves checkpoints, and exports generated image grids.
+### Marketing Creative Studio
+A realistic generative-creative product prototype focused on marketing use cases, with prompt optimization, ranked asset storage, targeted edit controls, and a real web frontend.
 
 - Project folder: `generative_ai_image_creator/`
 - Project README: `generative_ai_image_creator/README.md`
@@ -25,8 +25,7 @@ A dependency-light image generation project that implements both a **VAE** and a
 Run:
 
 ```bash
-PYTHONPATH=generative_ai_image_creator python -m generative_ai_image_creator.cli train-vae --epochs 10
-PYTHONPATH=generative_ai_image_creator python -m generative_ai_image_creator.cli train-gan --epochs 10
+PYTHONPATH=generative_ai_image_creator python -m generative_ai_image_creator.server --host 127.0.0.1 --port 8000
 ```
 
 ## Testing
