@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YOLOv8 Real-Time Object Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050810;--surface:#0a0f1e;--border:#1a2440;--accent:#00d4ff;--accent3:#ff2d6b;--success:#00ff88;--text:#c8d8e8;--dim:#4a6080;--mono:'Share Tech Mono',monospace;--display:'Rajdhani',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--display);min-height:100vh;padding:20px}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,#00d4ff0a,transparent 70%),radial-gradient(ellipse 60% 40% at 80% 100%,#7b2fff08,transparent 60%);pointer-events:none;z-index:0}
+header{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.logo{display:flex;align-items:center;gap:14px}
+.logo-icon{width:40px;height:40px;border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;position:relative}
+.logo-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--success)}
+.logo-dot.loading{background:var(--accent);animation:pulse 1s infinite}
+.logo-dot.error{background:var(--accent3)}
+h1{font-weight:700;font-size:20px;letter-spacing:3px;color:#fff;text-transform:uppercase}
+h1 span{color:var(--accent)}
+.subtitle{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:2px}
+.badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{font-family:var(--mono);font-size:11px;padding:4px 12px;letter-spacing:1px;border:1px solid}
+.badge.status-loading{color:var(--accent);border-color:#00d4ff44;animation:pulse 1s infinite}
+.badge.status-ready{color:var(--success);border-color:#00ff8844}
+.badge.status-error{color:var(--accent3);border-color:#ff2d6b44}
+.badge.fps{color:var(--success);border-color:#00ff8833}
+.badge.obj{color:var(--dim);border-color:var(--border)}
+.layout{position:relative;z-index:1;display:grid;grid-template-columns:1fr 270px;gap:18px;align-items:start}
+.modes{display:flex;border:1px solid var(--border);width:fit-content;margin-bottom:14px}
+.mode-btn{padding:8px 22px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:2px;text-transform:uppercase;background:transparent;color:var(--dim);border:none;cursor:pointer;transition:all .2s}
+.mode-btn.active{background:#00d4ff14;color:var(--accent)}
+.mode-btn:first-child{border-right:1px solid var(--border)}
+.viewport{position:relative;background:var(--surface);border:1px solid var(--border);overflow:hidden;min-height:400px;display:flex;align-items:center;justify-content:center}
+.viewport::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.012) 2px,rgba(0,212,255,.012) 4px);pointer-events:none}
+video,#previewImg{display:block;width:100%;max-height:500px;object-fit:contain}
+#previewImg{display:none}
+canvas#overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;max-width:100%;max-height:500px}
+.idle-msg{position:absolute;display:flex;flex-direction:column;align-items:center;gap:14px}
+.idle-icon{width:72px;height:72px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.idle-text{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:2px}
+.controls{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.btn{padding:8px 20px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:2px;text-transform:uppercase;border:1px solid;cursor:pointer;transition:all .2s;background:transparent}
+.btn.primary{color:var(--accent);border-color:var(--accent);background:#00d4ff14}
+.btn.danger{color:var(--accent3);border-color:var(--accent3);background:#ff2d6b14}
+.btn.secondary{color:var(--dim);border-color:var(--border)}
+.btn:disabled{color:var(--dim);border-color:var(--border);cursor:not-allowed;background:transparent}
+.conf-wrap{display:flex;align-items:center;gap:10px;margin-left:auto}
+.conf-label{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:1px;white-space:nowrap}
+input[type=range]{width:90px;accent-color:var(--accent);cursor:pointer}
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.panel{border:1px solid var(--border);background:var(--surface)}
+.panel-head{padding:7px 12px;border-bottom:1px solid var(--border);background:var(--bg)}
+.panel-head span{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:3px}
+.panel-body{padding:10px 12px}
+.det-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.det-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.det-name{font-family:var(--display);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px;flex:1}
+.det-conf{font-family:var(--mono);font-size:10px}
+.stat-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1a244040}
+.stat-key{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:1px}
+.stat-val{font-family:var(--mono);font-size:9px;color:var(--text);letter-spacing:1px}
+.stat-val.hi{color:var(--success)}
+.no-det{font-family:var(--mono);font-size:10px;color:var(--dim);padding:10px 0;text-align:center;letter-spacing:1px}
+.obj-row{display:flex;justify-content:space-between;padding:3px 0}
+.obj-name{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase}
+.obj-cnt{font-family:var(--mono);font-size:10px;color:var(--accent)}
+.overlay-load{position:fixed;inset:0;background:#050810f0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:100}
+.load-title{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:6px;color:#fff}
+.load-bar-wrap{width:300px;height:2px;background:var(--border);position:relative;overflow:hidden}
+.load-bar{position:absolute;left:0;top:0;height:100%;background:var(--accent);transition:width .3s;box-shadow:0 0 10px var(--accent)}
+.load-text{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:2px}
+.upload-zone{display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;padding:50px}
+.upload-box{width:72px;height:72px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center}
+.err-msg{font-family:var(--mono);font-size:11px;color:var(--accent3);text-align:center;max-width:280px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@media(max-width:768px){.layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="7" height="7" stroke="var(--accent)" stroke-width="1.5"/>
+        <rect x="14" y="3" width="7" height="7" stroke="var(--accent)" stroke-width="1.5"/>
+        <rect x="3" y="14" width="7" height="7" stroke="var(--accent)" stroke-width="1.5"/>
+        <circle cx="17.5" cy="17.5" r="2.5" stroke="var(--accent3)" stroke-width="1.5"/>
+      </svg>
+      <div class="logo-dot loading" id="statusDot"></div>
+    </div>
+    <div>
+      <h1>YOLO<span>v8</span> DETECTOR</h1>
+      <div class="subtitle">REAL-TIME · 80 CLASSES · ONNX RUNTIME</div>
+    </div>
+  </div>
+  <div class="badges">
+    <div class="badge status-loading" id="statusBadge">LOADING MODEL</div>
+    <div class="badge fps" id="fpsBadge" style="display:none">0 FPS</div>
+    <div class="badge obj" id="objBadge">0 OBJ</div>
+  </div>
+</header>
+<div class="layout">
+  <div>
+    <div class="modes">
+      <button class="mode-btn active" onclick="switchMode('camera')">⬡ LIVE</button>
+      <button class="mode-btn" onclick="switchMode('image')">⊞ IMAGE</button>
+    </div>
+    <div class="viewport" id="viewport">
+      <video id="video" muted playsinline style="display:none"></video>
+      <img id="previewImg" alt="uploaded">
+      <canvas id="overlay"></canvas>
+      <div class="idle-msg" id="idleMsg">
+        <div class="idle-icon">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" stroke="var(--dim)" stroke-width="1.5"/>
+            <path d="M3 9l2-2h14l2 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="var(--dim)" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="idle-text" id="idleText">CAMERA INACTIVE</div>
+        <div class="err-msg" id="errMsg" style="display:none"></div>
+      </div>
+      <label class="upload-zone" id="uploadZone" style="display:none" for="fileInput">
+        <div class="upload-box">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--dim)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="idle-text">DROP IMAGE / CLICK TO UPLOAD</div>
+      </label>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(this)">
+    <div class="controls">
+      <button class="btn primary" id="mainBtn" onclick="mainAction()" disabled>▶ START CAMERA</button>
+      <button class="btn secondary" id="uploadBtn" onclick="document.getElementById('fileInput').click()" style="display:none">⊞ UPLOAD IMAGE</button>
+      <button class="btn primary" id="detectBtn" onclick="runImageDetect()" style="display:none" disabled>⬡ RUN DETECTION</button>
+      <div class="conf-wrap">
+        <span class="conf-label" id="confLabel">CONF 40%</span>
+        <input type="range" min="10" max="90" value="40" oninput="setConf(this.value)">
+      </div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-head"><span>DETECTIONS</span></div>
+      <div class="panel-body" id="detList"><div class="no-det">NO OBJECTS DETECTED</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span>SYSTEM</span></div>
+      <div class="panel-body">
+        <div class="stat-row"><span class="stat-key">MODEL</span><span class="stat-val">YOLOv8n</span></div>
+        <div class="stat-row"><span class="stat-key">RUNTIME</span><span class="stat-val">ONNX Web</span></div>
+        <div class="stat-row"><span class="stat-key">CLASSES</span><span class="stat-val">80 COCO</span></div>
+        <div class="stat-row"><span class="stat-key">INPUT</span><span class="stat-val">640x640</span></div>
+        <div class="stat-row"><span class="stat-key">DEVICE</span><span class="stat-val">WebAssembly</span></div>
+        <div class="stat-row" id="fpsRow" style="display:none"><span class="stat-key">FPS</span><span class="stat-val hi" id="fpsVal">0</span></div>
+      </div>
+    </div>
+    <div class="panel" id="allObjPanel" style="display:none">
+      <div class="panel-head"><span>ALL OBJECTS</span></div>
+      <div class="panel-body" id="allObjList"></div>
+    </div>
+  </div>
+</div>
+<div class="overlay-load" id="loadOverlay">
+  <div class="load-title">INITIALIZING<span style="color:var(--accent)">.</span></div>
+  <div class="load-bar-wrap"><div class="load-bar" id="loadBar" style="width:0%"></div></div>
+  <div class="load-text" id="loadText">LOADING YOLOv8n · 0%</div>
+</div>
+<script>
+const CLASSES=['person','bicycle','car','motorcycle','airplane','bus','train','truck','boat','traffic light','fire hydrant','stop sign','parking meter','bench','bird','cat','dog','horse','sheep','cow','elephant','bear','zebra','giraffe','backpack','umbrella','handbag','tie','suitcase','frisbee','skis','snowboard','sports ball','kite','baseball bat','baseball glove','skateboard','surfboard','tennis racket','bottle','wine glass','cup','fork','knife','spoon','bowl','banana','apple','sandwich','orange','broccoli','carrot','hot dog','pizza','donut','cake','chair','couch','potted plant','bed','dining table','toilet','tv','laptop','mouse','remote','keyboard','cell phone','microwave','oven','toaster','sink','refrigerator','book','clock','vase','scissors','teddy bear','hair drier','toothbrush'];
+const COLORS=['#FF3366','#FF6633','#FFCC33','#33FF66','#33CCFF','#CC33FF','#FF33CC','#33FFCC','#FF9933','#3366FF','#FF3399','#99FF33','#33FF99','#9933FF','#FF9966','#66FF33','#3399FF','#FF6699','#33FF66','#6633FF','#FF3366','#33FFCC','#FF9933','#CC33FF','#33FF99','#FF6633','#3366FF','#FFCC33','#FF33CC','#33CCFF','#FF3399','#99FF33','#9933FF','#FF9966','#66FF33','#3399FF','#FF6699','#33FF66','#6633FF','#FF3366','#33FFCC','#FF9933','#CC33FF','#33FF99','#FF6633','#3366FF','#FFCC33','#FF33CC','#33CCFF','#FF3399','#99FF33','#9933FF','#FF9966','#66FF33','#3399FF','#FF6699','#33FF66','#6633FF','#FF3366','#33FFCC','#FF9933','#CC33FF','#33FF99','#FF6633','#3366FF','#FFCC33','#FF33CC','#33CCFF','#FF3399','#99FF33','#9933FF','#FF9966','#66FF33','#3399FF','#FF6699','#33FF66','#6633FF','#FF3366','#33FFCC','#FF9933','#CC33FF'];
+const MODEL_URL='https://huggingface.co/nicolo-calcagni-ds/yolov8n-onnx/resolve/main/yolov8n.onnx';
+const WASM_PATH='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
+const INPUT=640;
+let session=null,mode='camera',running=false,stream=null,conf=0.4,fps=0,fpsFrames=0,fpsLast=Date.now(),uploadedSrc=null,raf=0;
+const s=document.createElement('script');
+s.src='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js';
+s.onload=initModel;document.head.appendChild(s);
+function setProgress(p){document.getElementById('loadBar').style.width=p+'%';document.getElementById('loadText').textContent='LOADING YOLOv8n · '+p+'%';}
+async function initModel(){
+  try{
+    ort.env.wasm.wasmPaths=WASM_PATH;ort.env.wasm.numThreads=1;setProgress(5);
+    const res=await fetch(MODEL_URL);const total=+res.headers.get('content-length')||0;
+    const reader=res.body.getReader();const chunks=[];let received=0;
+    while(true){const{done,value}=await reader.read();if(done)break;chunks.push(value);received+=value.length;if(total)setProgress(5+Math.round(received/total*80));}
+    const buf=new Uint8Array(received);let off=0;for(const c of chunks){buf.set(c,off);off+=c.length;}
+    setProgress(88);session=await ort.InferenceSession.create(buf.buffer,{executionProviders:['wasm']});setProgress(100);
+    document.getElementById('loadOverlay').style.display='none';
+    document.getElementById('statusBadge').textContent='MODEL READY';document.getElementById('statusBadge').className='badge status-ready';
+    document.getElementById('statusDot').className='logo-dot';
+    document.getElementById('mainBtn').disabled=false;document.getElementById('detectBtn').disabled=false;
+  }catch(e){
+    document.getElementById('statusBadge').textContent='ERROR';document.getElementById('statusBadge').className='badge status-error';
+    document.getElementById('statusDot').className='logo-dot error';document.getElementById('loadText').textContent='FAILED: '+e.message;
+  }
+}
+function preprocess(src){const c=document.createElement('canvas');c.width=INPUT;c.height=INPUT;const ctx=c.getContext('2d');ctx.drawImage(src,0,0,INPUT,INPUT);const d=ctx.getImageData(0,0,INPUT,INPUT).data;const t=new Float32Array(3*INPUT*INPUT);for(let i=0;i<INPUT*INPUT;i++){t[i]=d[i*4]/255;t[INPUT*INPUT+i]=d[i*4+1]/255;t[2*INPUT*INPUT+i]=d[i*4+2]/255;}return t;}
+function iou(a,b){const ix1=Math.max(a.x1,b.x1),iy1=Math.max(a.y1,b.y1),ix2=Math.min(a.x2,b.x2),iy2=Math.min(a.y2,b.y2);const inter=Math.max(0,ix2-ix1)*Math.max(0,iy2-iy1);const u=(a.x2-a.x1)*(a.y2-a.y1)+(b.x2-b.x1)*(b.y2-b.y1)-inter;return u>0?inter/u:0;}
+function nms(dets,t=0.45){dets.sort((a,b)=>b.score-a.score);const kept=[],sup=new Set;for(let i=0;i<dets.length;i++){if(sup.has(i))continue;kept.push(dets[i]);for(let j=i+1;j<dets.length;j++)if(!sup.has(j)&&iou(dets[i],dets[j])>t)sup.add(j);}return kept;}
+async function detect(src,sw,sh){if(!session)return[];const inp=new ort.Tensor('float32',preprocess(src),[1,3,INPUT,INPUT]);const res=await session.run({images:inp});const out=res[Object.keys(res)[0]].data;const N=8400,sx=sw/INPUT,sy=sh/INPUT,dets=[];for(let i=0;i<N;i++){const cx=out[i],cy=out[N+i],w=out[2*N+i],h=out[3*N+i];let ms=0,cls=0;for(let c=0;c<80;c++){const v=out[(4+c)*N+i];if(v>ms){ms=v;cls=c;}}if(ms<conf)continue;dets.push({x1:(cx-w/2)*sx,y1:(cy-h/2)*sy,x2:(cx+w/2)*sx,y2:(cy+h/2)*sy,score:ms,cls,label:CLASSES[cls]||'cls'+cls});}return nms(dets);}
+function drawBoxes(dets,w,h){const cv=document.getElementById('overlay');cv.width=w;cv.height=h;const ctx=cv.getContext('2d');ctx.clearRect(0,0,w,h);dets.forEach(d=>{const col=COLORS[d.cls%COLORS.length];ctx.strokeStyle=col;ctx.lineWidth=2;ctx.shadowColor=col;ctx.shadowBlur=6;ctx.strokeRect(d.x1,d.y1,d.x2-d.x1,d.y2-d.y1);ctx.shadowBlur=0;const cs=10;ctx.lineWidth=2.5;[[d.x1,d.y1,1,1],[d.x2,d.y1,-1,1],[d.x1,d.y2,1,-1],[d.x2,d.y2,-1,-1]].forEach(([x,y,dx,dy])=>{ctx.beginPath();ctx.moveTo(x+dx*cs,y);ctx.lineTo(x,y);ctx.lineTo(x,y+dy*cs);ctx.stroke();});const lbl=d.label.toUpperCase()+'  '+Math.round(d.score*100)+'%';ctx.font='bold 10px "Share Tech Mono"';const tw=ctx.measureText(lbl).width;const lx=d.x1,ly=d.y1>20?d.y1-20:d.y1+2;ctx.fillStyle=col+'dd';ctx.fillRect(lx,ly,tw+8,16);ctx.fillStyle='#000';ctx.fillText(lbl,lx+4,ly+12);});}
+function updateUI(dets){document.getElementById('objBadge').textContent=dets.length+' OBJ';const top=[...new Map(dets.map(d=>[d.cls,d])).values()].sort((a,b)=>b.score-a.score).slice(0,8);const dl=document.getElementById('detList');if(!top.length){dl.innerHTML='<div class="no-det">NO OBJECTS DETECTED</div>';return;}dl.innerHTML=top.map(d=>`<div class="det-row"><div class="det-dot" style="background:${COLORS[d.cls%COLORS.length]}"></div><span class="det-name">${d.label}</span><span class="det-conf" style="color:${COLORS[d.cls%COLORS.length]}">${Math.round(d.score*100)}%</span></div>`).join('');const counts=dets.reduce((a,d)=>{a[d.label]=(a[d.label]||0)+1;return a},{});const aop=document.getElementById('allObjPanel');aop.style.display='block';document.getElementById('allObjList').innerHTML=Object.entries(counts).map(([n,c])=>`<div class="obj-row"><span class="obj-name">${n}</span><span class="obj-cnt">x${c}</span></div>`).join('');}
+let loop=async()=>{if(!running)return;const v=document.getElementById('video');if(v.readyState>=2){try{const d=await detect(v,v.videoWidth||640,v.videoHeight||480);drawBoxes(d,v.videoWidth||640,v.videoHeight||480);updateUI(d);fpsFrames++;const now=Date.now();if(now-fpsLast>=1000){fps=fpsFrames;fpsFrames=0;fpsLast=now;document.getElementById('fpsBadge').textContent=fps+' FPS';document.getElementById('fpsRow').style.display='flex';document.getElementById('fpsVal').textContent=fps;}}catch(e){}}raf=requestAnimationFrame(loop);};
+async function startCamera(){document.getElementById('errMsg').style.display='none';try{stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'}});const v=document.getElementById('video');v.srcObject=stream;v.style.display='block';await v.play();document.getElementById('idleMsg').style.display='none';document.getElementById('mainBtn').textContent='■ STOP DETECTION';document.getElementById('mainBtn').className='btn danger';document.getElementById('fpsBadge').style.display='flex';running=true;loop();}catch(e){document.getElementById('errMsg').textContent=e.message||'Camera access denied';document.getElementById('errMsg').style.display='block';}}
+function stopCamera(){running=false;cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;const v=document.getElementById('video');v.srcObject=null;v.style.display='none';document.getElementById('idleMsg').style.display='flex';document.getElementById('mainBtn').textContent='▶ START CAMERA';document.getElementById('mainBtn').className='btn primary';document.getElementById('fpsBadge').style.display='none';document.getElementById('fpsRow').style.display='none';const cv=document.getElementById('overlay');cv.getContext('2d').clearRect(0,0,cv.width,cv.height);updateUI([]);}
+function mainAction(){mode==='camera'?(running?stopCamera():startCamera()):null;}
+function switchMode(m){if(m===mode)return;if(running)stopCamera();uploadedSrc=null;document.getElementById('previewImg').style.display='none';document.getElementById('previewImg').src='';document.getElementById('allObjPanel').style.display='none';const cv=document.getElementById('overlay');cv.getContext('2d').clearRect(0,0,cv.width,cv.height);updateUI([]);mode=m;document.querySelectorAll('.mode-btn').forEach((b,i)=>b.classList.toggle('active',i===(m==='camera'?0:1)));const camEl=document.getElementById('mainBtn'),upEl=document.getElementById('uploadBtn'),detEl=document.getElementById('detectBtn'),idle=document.getElementById('idleMsg'),uzone=document.getElementById('uploadZone');if(m==='camera'){camEl.style.display='';upEl.style.display='none';detEl.style.display='none';idle.style.display='flex';uzone.style.display='none';document.getElementById('idleText').textContent='CAMERA INACTIVE';}else{camEl.style.display='none';upEl.style.display='';detEl.style.display='';idle.style.display='none';uzone.style.display='flex';}}
+function handleFile(inp){const file=inp.files[0];if(!file)return;const url=URL.createObjectURL(file);const img=document.getElementById('previewImg');img.src=url;img.style.display='block';document.getElementById('uploadZone').style.display='none';uploadedSrc=url;}
+async function runImageDetect(){if(!uploadedSrc||!session)return;const img=document.getElementById('previewImg');await new Promise(r=>{img.onload=r;img.src=uploadedSrc;});const d=await detect(img,img.naturalWidth,img.naturalHeight);drawBoxes(d,img.naturalWidth,img.naturalHeight);updateUI(d);}
+function setConf(v){conf=v/100;document.getElementById('confLabel').textContent='CONF '+v+'%';}
+</script>
+</body>
+</html>
